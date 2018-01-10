@@ -2,6 +2,7 @@ package datastructures.concrete;
 
 import datastructures.interfaces.IList;
 import misc.exceptions.EmptyContainerException;
+
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -23,7 +24,7 @@ public class DoubleLinkedList<T> implements IList<T> {
         this.size = 0;
     }
 
-    private Node<T> goToFront(int index) {// go to index from front
+    private Node<T> goTo(int index) {
         Node<T> current = this.front;
         for (int i = 0; i < index; i++) {
             current = current.next;
@@ -31,14 +32,13 @@ public class DoubleLinkedList<T> implements IList<T> {
         return current;
     }
     
-    private Node<T> goToBack(int index) {// go to index from front
+    private Node<T> goToBackward(int index) {// go to index from front
         Node<T> current = this.back;
-        for (int i = this.size-1; i > index; i--) {
+        for (int i = this.size - 1; i > index; i--) {
             current = current.prev;
         }
         return current;
-    }
-    
+}
     
     public String toString() {
         if (front == null) {
@@ -57,21 +57,16 @@ public class DoubleLinkedList<T> implements IList<T> {
     
     @Override
     // add at the end, item could be string/int...
-    public void add(T item) { //could combine?
+    public void add(T item) {
         if (this.front == null) {
             this.front = new Node<T>(item); 
             this.back = this.front;
-        }
-        else { 
+        } else { 
             Node<T> curr = back;
-            this.back.next = new Node<T>(curr, item, null);
-            this.back = curr.next; 
-            
-            
+            curr.next = new Node<T>(back,item,null);
+            this.back = curr.next;    
         }
         this.size++;
-        
-        
     }
 
     @Override
@@ -87,8 +82,7 @@ public class DoubleLinkedList<T> implements IList<T> {
             this.back = null;
             this.size--;
             return currData;
-        }
-        else {
+        } else {
             Node<T> curr = this.back;
             T currData = curr.data;
             this.back = this.back.prev; 
@@ -101,17 +95,17 @@ public class DoubleLinkedList<T> implements IList<T> {
     @Override
     // return the value of the given index
     public T get(int index) {
-        if (index<0 || index > this.size()) {
+        if (index < 0 || index >= this.size()) {
             throw new IndexOutOfBoundsException();
         }
-        Node<T> curr = goToFront(index);
+        Node<T> curr = goTo(index);
         return curr.data;       
     }
 
     @Override
     // go to ith index, change the data to the item
     public void set(int index, T item) {
-        if (index<0 || index > this.size()) {
+        if (index < 0 || index >= this.size()) {
             throw new IndexOutOfBoundsException();
         }
         delete(index);
@@ -120,75 +114,87 @@ public class DoubleLinkedList<T> implements IList<T> {
 
     @Override
     // go to ith index, add the item, move leftover items to the right
-    public void insert(int index, T item) { 
-        if (index<0 ||index > this.size) {
+    public void insert(int index, T item) { //insert on the first, still have problem
+        if (index < 0 || index > this.size) {
             throw new IndexOutOfBoundsException();           
         }
         if (this.front == null || index == this.size) {
             add(item);
-        }else if(index == 0){
-            this.front = new Node<T>(null, item, this.front);
-            this.size++;
-        }
-        else if(index == this.size) {
-            add(item);
-        }else if(index <= this.size/2) {// go from front
-            Node<T> curr = goToFront(index-1);
+            this.size--;
+        } else if (index == 0) {
+            Node<T> curr = this.front;
+            this.front = new Node<T>(null, item, curr);
+            curr.prev = this.front;
+        } else if (index <= this.size / 2) {
+            Node<T> curr = goTo(index - 1);
             Node<T> temp = curr.next;
             curr.next = new Node<T>(curr, item, temp);
-            this.size++;
-        }else { // go from back
-            Node<T> curr = goToBack(index-1);
+            temp.prev = curr.next;
+        } else {
+            Node<T> curr = goToBackward(index - 1);
             Node<T> temp = curr.next;
             curr.next = new Node<T>(curr, item, temp);
-            this.size++;
+            temp.prev = curr.next;
         }
-        
+        this.size++;
     }
 
     @Override
     // delete the certain index
-    public T delete(int index) { 
-        if (index<0 ||index > this.size) {
+    public T delete(int index) { //delete at index 0, problematic
+        if (this.front == null) {           
+            throw new EmptyContainerException();
+        }
+        if (index < 0 ||index >= this.size) {
             throw new IndexOutOfBoundsException();           
-        }
-        
-        if (index == 0) {
+        } 
+        if (this.size == 1) {
             Node<T> curr = this.front;
+            this.front = null;
+            this.back = null;
+            this.size--;
+            return curr.data;
+        } else if (index == this.size - 1) {
+            return remove();
+        } else if (index > 0 && index <= this.size / 2) {
+            Node<T> curr = goTo(index);
+            Node<T> temp1 = curr.prev;
+            Node<T> temp2 = curr.next;
+            temp1.next = temp2;
+            temp2.prev = temp1;
+            this.size--;
+            return curr.data;
+        } else if (index > 0) {
+            Node<T> curr = goToBackward(index);
+            Node<T> temp1 = curr.prev;
+            Node<T> temp2 = curr.next;
+            temp1.next = temp2;
+            temp2.prev = temp1;
+            this.size--;
+            return curr.data;
+        } else {
+            Node<T> curr = this.front;
+            Node<T> temp = curr.next;            
             this.front = this.front.next;
-            this.size--;
-            return curr.data;
-        }else if(index == this.size){
-            return(remove());
-        }
-        else if(index <= this.size/2) {        
-            Node<T> curr = goToFront(index);
-            Node<T> temp = goToFront(index-1);
-            temp.next = temp.next.next;   
-            this.size--;
-            return curr.data;
-        }else {
-            Node<T> curr = goToBack(index);
-            Node<T> temp = goToBack(index-1);
-            temp.next = temp.next.next;
+            temp.prev = this.front;
             this.size--;
             return curr.data;
         }
-        
     }
 
     @Override
     // return index of certain item
-    public int indexOf(T item) {       
+    public int indexOf(T item) {
         Node<T> curr = this.front;
         int count = 0;        
-        while (curr.data != item && curr.next!=null) {
+        while(curr.data != item && curr.next != null) {
             curr = curr.next;
             count++;
         }  
-        if (curr.data == item) {
+        if (item != null && (curr.data.equals(item)) ||
+                (curr.data == null && item == null)) {
             return count;
-        }else {
+        } else {
             return -1;
         }
     }
@@ -207,7 +213,6 @@ public class DoubleLinkedList<T> implements IList<T> {
     }
 
     @Override
-    
     public Iterator<T> iterator() {
         // Note: we have provided a part of the implementation of
         // an iterator for you. You should complete the methods stubs
@@ -249,7 +254,7 @@ public class DoubleLinkedList<T> implements IList<T> {
          * returns 'false' otherwise.
          */
         public boolean hasNext() {
-            return (this.current!= null && this.current.next != null);
+            return this.current != null;
         }
 
         /**
@@ -262,6 +267,9 @@ public class DoubleLinkedList<T> implements IList<T> {
         public T next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
+            }
+            if (current == null && current.prev == null) {
+                
             }
             Node<T> curr = this.current;
             this.current = this.current.next;
